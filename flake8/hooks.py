@@ -60,13 +60,14 @@ def git_hook(complexity=-1, strict=False, ignore=None, lazy=False):
     try:
         for file_ in files_modified:
             # get the staged version of the file
-            gitcmd_getstaged = "git show :%s" % file_
-            _, out, _ = run(gitcmd_getstaged, raw_output=True, decode=False)
-            # write the staged version to temp dir with its full path to
-            # avoid overwriting files with the same name
-            dirname, filename = os.path.split(os.path.abspath(file_))
-            prefix = os.path.commonprefix([dirname, tmpdir])
-            dirname = compat.relpath(dirname, start=prefix)
+            gitcmd_getstaged = "git cat-file blob HEAD:%s" % file_
+            rc, out, _ = run(gitcmd_getstaged, raw_output=True, decode=False)
+            assert rc == 0
+
+            # write the staged version to temp dir with full path to get
+            # filenames equivalent to those reported when running from within
+            # the repo
+            dirname, filename = os.path.split(file_)
             dirname = os.path.join(tmpdir, dirname)
             if not os.path.isdir(dirname):
                 os.makedirs(dirname)
@@ -75,14 +76,16 @@ def git_hook(complexity=-1, strict=False, ignore=None, lazy=False):
             if ((pep8.filename_match(file_, filepatterns) and
                  not flake8_style.excluded(file_))):
 
-                filename = os.path.join(dirname, filename)
-                files_to_check.append(filename)
+                files_to_check.append(file_)
+                filename = os.path.join(tmpdir, file_)
                 # write staged version of file to temporary directory
                 with open(filename, "wb") as fh:
                     fh.write(out)
 
         # Run the checks
+        os.chdir(tmpdir)
         report = flake8_style.check_files(files_to_check)
+
     # remove temporary directory
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
