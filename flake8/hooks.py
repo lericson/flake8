@@ -62,7 +62,6 @@ def git_hook(complexity=-1, strict=False, ignore=None, lazy=False):
             # get the staged version of the file
             gitcmd_getstaged = "git cat-file blob HEAD:%s" % file_
             rc, out, _ = run(gitcmd_getstaged, raw_output=True, decode=False)
-            assert rc == 0
 
             # write the staged version to temp dir with full path to get
             # filenames equivalent to those reported when running from within
